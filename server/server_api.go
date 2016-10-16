@@ -10,6 +10,7 @@ import (
 
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
+
 	"github.com/jpillora/cloud-torrent/engine"
 )
 
@@ -48,20 +49,11 @@ func (s *Server) api(r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		ts := torrent.TorrentSpecFromMetaInfo(info)
-		trackers := []string{}
-		for _, tier := range ts.Trackers {
-			for _, t := range tier {
-				trackers = append(trackers, t)
-			}
+		spec := torrent.TorrentSpecFromMetaInfo(info)
+		if err := s.engine.NewTorrent(spec); err != nil {
+			return fmt.Errorf("Torrent error: %s", err)
 		}
-		m := torrent.Magnet{
-			InfoHash:    ts.InfoHash,
-			Trackers:    trackers,
-			DisplayName: ts.DisplayName,
-		}
-		data = []byte(m.String())
-		action = "magnet"
+		return nil
 	}
 
 	//update after action completes
@@ -79,7 +71,7 @@ func (s *Server) api(r *http.Request) error {
 		}
 	case "magnet":
 		uri := string(data)
-		if err := s.engine.NewTorrent(uri); err != nil {
+		if err := s.engine.NewMagnet(uri); err != nil {
 			return fmt.Errorf("Magnet error: %s", err)
 		}
 	case "torrent":
